@@ -17,6 +17,9 @@ import com.example.dsy1105_006d_lc7.view.DrawerMenu
 
 import com.example.dsy1105_006d_lc7.ui.proveedor.ProveedorScreen
 import com.example.dsy1105_006d_lc7.ui.proveedor.ProveedorViewModel
+
+import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionScreen
+import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionViewModel
 @Composable
 fun AppNavigation() {
 
@@ -81,6 +84,15 @@ fun AppNavigation() {
 
             ProveedorScreen(
                 viewModel = proveedorViewModel,
+                onVolver = { navController.popBackStack() }
+            )
+        }
+
+        composable("ubicaciones") {
+            val ubicacionViewModel: UbicacionViewModel = viewModel()
+
+            UbicacionScreen(
+                viewModel = ubicacionViewModel,
                 onVolver = { navController.popBackStack() }
             )
         }

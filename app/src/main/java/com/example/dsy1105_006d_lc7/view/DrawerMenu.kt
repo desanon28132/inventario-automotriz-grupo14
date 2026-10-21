@@ -81,6 +81,16 @@ fun DrawerMenu(
                 }
             )
 
+            NavigationDrawerItem(
+                label = { Text("Ubicaciones") },
+                selected = false,
+                onClick = {
+                    navController.navigate("ubicaciones") {
+                        launchSingleTop = true
+                    }
+                }
+            )
+
 
             NavigationDrawerItem(
                 label = { Text("Cerrar sesión") },

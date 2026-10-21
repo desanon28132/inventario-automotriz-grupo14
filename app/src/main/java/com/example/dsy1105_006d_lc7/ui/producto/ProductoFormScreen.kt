@@ -28,6 +28,23 @@ fun ProductoFormScreen(
     val proveedorSeleccionado = proveedores.firstOrNull {
         it.id == state.proveedorId
     }
+    val ubicaciones by viewModel.ubicaciones.collectAsState()
+
+    var menuUbicacionAbierto by remember {
+        mutableStateOf(false)
+    }
+
+    val ubicacionSeleccionada = ubicaciones.firstOrNull {
+        it.id == state.ubicacionId
+    }
+
+    val formatoFechaUbicacion = remember {
+        java.text.SimpleDateFormat(
+            "dd/MM/yyyy HH:mm",
+            java.util.Locale("es", "CL")
+        )
+    }
+
     var menuEstadoAbierto by remember { mutableStateOf(false) }
 
     val habilitado = !state.cargando && !state.guardando
@@ -202,6 +219,77 @@ fun ProductoFormScreen(
             if (proveedores.none { it.activo }) {
                 Text(
                     text = "Registra un proveedor activo desde el menú Proveedores.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                text = "Ubicación en bodega",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Box {
+                OutlinedButton(
+                    onClick = { menuUbicacionAbierto = true },
+                    enabled = habilitado,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        ubicacionSeleccionada?.let {
+                            "${it.codigo} - ${it.zona}"
+                        } ?: "Sin ubicación asignada"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuUbicacionAbierto,
+                    onDismissRequest = { menuUbicacionAbierto = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sin ubicación asignada") },
+                        onClick = {
+                            viewModel.onUbicacionChange(null)
+                            menuUbicacionAbierto = false
+                        }
+                    )
+
+                    ubicaciones.forEach { ubicacion ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "${ubicacion.codigo}: ${ubicacion.zona}, " +
+                                            "estante ${ubicacion.estante}, " +
+                                            "repisa ${ubicacion.repisa}, " +
+                                            ubicacion.posicion
+                                )
+                            },
+                            onClick = {
+                                viewModel.onUbicacionChange(ubicacion.id)
+                                menuUbicacionAbierto = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            ubicacionSeleccionada?.let {
+                Text("Zona: ${it.zona}")
+                Text("Estante: ${it.estante}")
+                Text("Repisa: ${it.repisa}")
+                Text("Posición: ${it.posicion}")
+            }
+
+            state.fechaCambioUbicacion?.let { fecha ->
+                Text(
+                    text = "Último cambio guardado: ${
+                        formatoFechaUbicacion.format(java.util.Date(fecha))
+                    }",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            if (ubicaciones.isEmpty()) {
+                Text(
+                    text = "Primero registra una ubicación desde el menú Ubicaciones.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

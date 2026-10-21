@@ -18,6 +18,8 @@ data class ProductoUiState(
     val estado: String = "Activo",
     val cantidadReposicion: String = "0",
     val proveedorId: Int? = null,
+    val ubicacionId: Int? = null,
+    val fechaCambioUbicacion: Long? = null,
 
     val codigoError: String? = null,
     val nombreError: String? = null,

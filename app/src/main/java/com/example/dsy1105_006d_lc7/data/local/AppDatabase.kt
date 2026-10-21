@@ -11,9 +11,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         ProductoEntity::class,
         MovimientoEntity::class,
-        ProveedorEntity::class
+        ProveedorEntity::class,
+        UbicacionEntity::class
+
+
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productoDao(): ProductoDao
     abstract fun movimientoDao(): MovimientoDao
     abstract fun proveedorDao(): ProveedorDao
+
+    abstract fun ubicacionDao(): UbicacionDao
 
     companion object {
 
@@ -131,6 +136,39 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS ubicaciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                codigo TEXT NOT NULL,
+                zona TEXT NOT NULL,
+                estante TEXT NOT NULL,
+                repisa TEXT NOT NULL,
+                posicion TEXT NOT NULL,
+                fechaActualizacion INTEGER NOT NULL
+            )
+            """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+            CREATE UNIQUE INDEX IF NOT EXISTS index_ubicaciones_codigo
+            ON ubicaciones (codigo)
+            """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+            ALTER TABLE productos
+            ADD COLUMN fechaCambioUbicacion INTEGER
+            """.trimIndent()
+                )
+            }
+        }
+
 
 
         fun getDatabase(context: Context): AppDatabase {
@@ -145,7 +183,8 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2,
                         MIGRATION_2_3,
-                        MIGRATION_3_4
+                        MIGRATION_3_4,
+                        MIGRATION_4_5
                     )
                     .build()
                     .also { INSTANCE = it }

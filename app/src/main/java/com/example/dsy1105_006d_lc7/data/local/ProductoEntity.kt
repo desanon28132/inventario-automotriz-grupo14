@@ -32,6 +32,7 @@ data class ProductoEntity(
 
     val proveedorId: Int? = null,
     val ubicacionId: Int? = null,
+    val fechaCambioUbicacion: Long? = null,
 
     val cantidadReposicion: Int = 0,
 

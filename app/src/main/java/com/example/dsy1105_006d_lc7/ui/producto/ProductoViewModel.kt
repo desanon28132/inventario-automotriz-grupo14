@@ -34,6 +34,23 @@ class ProductoViewModel(application: Application) :
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
+    private val ubicacionDao = AppDatabase
+        .getDatabase(application)
+        .ubicacionDao()
+
+    val ubicaciones = ubicacionDao.observarTodas()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+
+    fun onUbicacionChange(id: Int?) {
+        _form.update {
+            it.copy(ubicacionId = id, errorGeneral = null)
+        }
+    }
+
 
     fun onProveedorChange(id: Int?) {
         _form.update {
@@ -151,6 +168,8 @@ class ProductoViewModel(application: Application) :
                     precioVenta = p.precioVenta.toString(),
                     estado = p.estado,
                     proveedorId = p.proveedorId,
+                    ubicacionId = p.ubicacionId,
+                    fechaCambioUbicacion = p.fechaCambioUbicacion,
                     cantidadReposicion = p.cantidadReposicion.toString()
                 )
             } catch (e: CancellationException) {
@@ -288,6 +307,26 @@ class ProductoViewModel(application: Application) :
                         return@launch
                     }
                 }
+                val ubicacionId = s.ubicacionId
+
+                if (
+                    ubicacionId != null &&
+                    ubicacionDao.obtenerPorId(ubicacionId) == null
+                ) {
+                    _form.update {
+                        it.copy(
+                            guardando = false,
+                            errorGeneral = "La ubicación seleccionada ya no existe"
+                        )
+                    }
+                    return@launch
+                }
+
+                val fechaUbicacion = if (base.ubicacionId != ubicacionId) {
+                    System.currentTimeMillis()
+                } else {
+                    base.fechaCambioUbicacion
+                }
 
                 val producto = base.copy(
                     codigo = s.codigo.trim(),
@@ -306,6 +345,8 @@ class ProductoViewModel(application: Application) :
                     precioVenta = s.precioVenta.trim().toLong(),
                     estado = s.estado,
                     proveedorId = s.proveedorId,
+                    ubicacionId = ubicacionId,
+                    fechaCambioUbicacion = fechaUbicacion,
                     cantidadReposicion = s.cantidadReposicion.trim().toInt()
                 )
 

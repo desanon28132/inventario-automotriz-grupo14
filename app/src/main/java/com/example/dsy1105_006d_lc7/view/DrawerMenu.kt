@@ -1,8 +1,10 @@
 package com.example.dsy1105_006d_lc7.view
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,8 +19,13 @@ fun DrawerMenu(
     navController: NavController
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Menú principal") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Menú principal") }
+            )
+        }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -26,26 +33,73 @@ fun DrawerMenu(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Hola, $username", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                text = "Hola, $username",
+                style = MaterialTheme.typography.headlineSmall
+            )
 
             NavigationDrawerItem(
                 label = { Text("Productos") },
                 selected = false,
-                onClick = { navController.navigate("lista_productos") },
-                icon = { Icon(Icons.Default.Inventory2, contentDescription = "Productos") }
+                onClick = {
+                    navController.navigate("lista_productos") {
+                        launchSingleTop = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Inventory2,
+                        contentDescription = null
+                    )
+                }
             )
+
+            NavigationDrawerItem(
+                label = { Text("Movimientos e historial") },
+                selected = false,
+                onClick = {
+                    navController.navigate(
+                        "movimientos/${Uri.encode(username)}"
+                    ) {
+                        launchSingleTop = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null
+                    )
+                }
+            )
+            NavigationDrawerItem(
+                label = { Text("Proveedores") },
+                selected = false,
+                onClick = {
+                    navController.navigate("proveedores") {
+                        launchSingleTop = true
+                    }
+                }
+            )
+
 
             NavigationDrawerItem(
                 label = { Text("Cerrar sesión") },
                 selected = false,
                 onClick = {
                     navController.navigate("login") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo(navController.graph.id) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
                     }
                 },
-                icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir") }
+                icon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null
+                    )
+                }
             )
         }
     }
 }
-

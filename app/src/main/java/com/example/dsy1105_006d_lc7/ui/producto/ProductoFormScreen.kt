@@ -19,8 +19,19 @@ fun ProductoFormScreen(
     onVolver: () -> Unit
 ) {
     val state by viewModel.form.collectAsState()
+    val proveedores by viewModel.proveedores.collectAsState()
 
-    // Cuando se guarda bien, vuelve a la lista
+    var menuProveedorAbierto by remember {
+        mutableStateOf(false)
+    }
+
+    val proveedorSeleccionado = proveedores.firstOrNull {
+        it.id == state.proveedorId
+    }
+    var menuEstadoAbierto by remember { mutableStateOf(false) }
+
+    val habilitado = !state.cargando && !state.guardando
+
     LaunchedEffect(state.guardadoExitosamente) {
         if (state.guardadoExitosamente) {
             viewModel.consumirGuardado()
@@ -31,10 +42,21 @@ fun ProductoFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.esEdicion) "Editar producto" else "Nuevo producto") },
+                title = {
+                    Text(
+                        if (state.esEdicion) "Editar producto"
+                        else "Nuevo producto"
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    IconButton(
+                        onClick = onVolver,
+                        enabled = !state.guardando
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 }
             )
@@ -44,30 +66,222 @@ fun ProductoFormScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CampoTexto("Código", state.codigo, viewModel::onCodigoChange, state.codigoError)
-            CampoTexto("Nombre", state.nombre, viewModel::onNombreChange, state.nombreError)
-            CampoTexto("Categoría", state.categoria, viewModel::onCategoriaChange, state.categoriaError)
-            CampoTexto(
-                "Cantidad", state.cantidad, viewModel::onCantidadChange, state.cantidadError,
-                KeyboardType.Number
-            )
-            CampoTexto(
-                "Stock mínimo", state.stockMinimo, viewModel::onStockMinimoChange,
-                state.stockMinimoError, KeyboardType.Number
+            if (state.cargando) {
+                CircularProgressIndicator()
+                Text("Cargando producto...")
+            }
+
+            state.errorGeneral?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            Text(
+                "Información del producto",
+                style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            CampoTexto(
+                "Código", state.codigo,
+                viewModel::onCodigoChange, state.codigoError,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Nombre", state.nombre,
+                viewModel::onNombreChange, state.nombreError,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Descripción", state.descripcion,
+                viewModel::onDescripcionChange, state.descripcionError,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Categoría", state.categoria,
+                viewModel::onCategoriaChange, state.categoriaError,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Marca", state.marca,
+                viewModel::onMarcaChange, state.marcaError,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Unidad de medida (Unidad, Litro, etc.)",
+                state.unidadMedida,
+                viewModel::onUnidadMedidaChange,
+                state.unidadMedidaError,
+                habilitado = habilitado
+            )
+
+            Box {
+                OutlinedButton(
+                    onClick = { menuEstadoAbierto = true },
+                    enabled = habilitado,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Estado: ${state.estado}")
+                }
+
+                DropdownMenu(
+                    expanded = menuEstadoAbierto,
+                    onDismissRequest = { menuEstadoAbierto = false }
+                ) {
+                    listOf("Activo", "Inactivo", "Descontinuado")
+                        .forEach { opcion ->
+                            DropdownMenuItem(
+                                text = { Text(opcion) },
+                                onClick = {
+                                    viewModel.onEstadoChange(opcion)
+                                    menuEstadoAbierto = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Proveedor principal",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Box {
+                OutlinedButton(
+                    onClick = { menuProveedorAbierto = true },
+                    enabled = habilitado,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        proveedorSeleccionado?.let {
+                            "${it.nombre}${if (!it.activo) " (inactivo)" else ""}"
+                        } ?: "Sin proveedor asignado"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuProveedorAbierto,
+                    onDismissRequest = { menuProveedorAbierto = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sin proveedor asignado") },
+                        onClick = {
+                            viewModel.onProveedorChange(null)
+                            menuProveedorAbierto = false
+                        }
+                    )
+
+                    proveedores
+                        .filter { it.activo }
+                        .forEach { proveedor ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text("${proveedor.codigo} - ${proveedor.nombre}")
+                                },
+                                onClick = {
+                                    viewModel.onProveedorChange(proveedor.id)
+                                    menuProveedorAbierto = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            if (proveedores.none { it.activo }) {
+                Text(
+                    text = "Registra un proveedor activo desde el menú Proveedores.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+
+            Text(
+                "Existencias",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            CampoTexto(
+                label = if (state.esEdicion) {
+                    "Stock actual"
+                } else {
+                    "Cantidad inicial"
+                },
+                valor = state.cantidad,
+                onChange = viewModel::onCantidadChange,
+                error = state.cantidadError,
+                tipoTeclado = KeyboardType.Number,
+                habilitado = habilitado && !state.esEdicion
+            )
+
+            if (state.esEdicion) {
+                Text(
+                    text = "Para cambiar el stock, registra un movimiento.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            CampoTexto(
+                "Stock mínimo", state.stockMinimo,
+                viewModel::onStockMinimoChange, state.stockMinimoError,
+                tipoTeclado = KeyboardType.Number,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Cantidad sugerida de reposición",
+                state.cantidadReposicion,
+                viewModel::onCantidadReposicionChange,
+                state.cantidadReposicionError,
+                tipoTeclado = KeyboardType.Number,
+                habilitado = habilitado
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "Precios referenciales",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text("Escribe pesos chilenos sin puntos ni comas.")
+
+            CampoTexto(
+                "Precio de compra", state.precioCompra,
+                viewModel::onPrecioCompraChange, state.precioCompraError,
+                tipoTeclado = KeyboardType.Number,
+                habilitado = habilitado
+            )
+
+            CampoTexto(
+                "Precio de venta", state.precioVenta,
+                viewModel::onPrecioVentaChange, state.precioVentaError,
+                tipoTeclado = KeyboardType.Number,
+                habilitado = habilitado
+            )
+
+            Spacer(Modifier.height(8.dp))
 
             Button(
                 onClick = viewModel::guardar,
-                enabled = !state.guardando,
+                enabled = habilitado,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (state.guardando) "Guardando..." else "Guardar")
+                Text(
+                    if (state.guardando) "Guardando..."
+                    else "Guardar producto"
+                )
             }
         }
     }
@@ -79,16 +293,24 @@ private fun CampoTexto(
     valor: String,
     onChange: (String) -> Unit,
     error: String?,
-    tipoTeclado: KeyboardType = KeyboardType.Text
+    tipoTeclado: KeyboardType = KeyboardType.Text,
+    habilitado: Boolean = true
 ) {
     OutlinedTextField(
         value = valor,
         onValueChange = onChange,
         label = { Text(label) },
+        enabled = habilitado,
         isError = error != null,
-        supportingText = { Text(error ?: "") },
+        supportingText = {
+            if (error != null) {
+                Text(error)
+            }
+        },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = tipoTeclado),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = tipoTeclado
+        ),
         modifier = Modifier.fillMaxWidth()
     )
 }

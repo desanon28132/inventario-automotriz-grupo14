@@ -111,49 +111,144 @@ private fun ProductoItem(
     onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
-    val stockBajo = producto.cantidad <= producto.stockMinimo
+    // Clasificación según las existencias.
+    val agotado = producto.cantidad == 0
+
+    val stockBajo = producto.cantidad > 0 &&
+            producto.cantidad < producto.stockMinimo
+
+    val requiereAtencion = agotado || stockBajo
+
+    val estadoStock = when {
+        agotado -> "Agotado"
+        stockBajo -> "Stock bajo"
+        else -> "Disponible"
+    }
+
+    // Formato de moneda chilena, sin decimales.
+    val formatoPrecio = remember {
+        java.text.NumberFormat.getCurrencyInstance(
+            java.util.Locale("es", "CL")
+        ).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 0
+        }
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onEditar() },
+
         colors = CardDefaults.cardColors(
-            containerColor = if (stockBajo) MaterialTheme.colorScheme.errorContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (requiereAtencion) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    producto.nombre,
+                    text = producto.nombre,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+
                 Text("Código: ${producto.codigo}")
+
+                if (producto.descripcion.isNotBlank()) {
+                    Text(
+                        text = producto.descripcion,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
                 Text("Categoría: ${producto.categoria}")
-                Text("Stock: ${producto.cantidad} (mínimo ${producto.stockMinimo})")
-                if (stockBajo) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Text(
+                    "Marca: ${
+                        producto.marca.ifBlank { "Sin registrar" }
+                    }"
+                )
+
+                Text("Unidad de medida: ${producto.unidadMedida}")
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Stock: ${producto.cantidad}",
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text("Stock mínimo: ${producto.stockMinimo}")
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (requiereAtencion) {
                         Icon(
-                            Icons.Default.Warning,
+                            imageVector = Icons.Default.Warning,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
+
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "Stock bajo",
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
+
+                    Text(
+                        text = "Existencias: $estadoStock",
+                        fontWeight = FontWeight.Bold,
+                        color = if (requiereAtencion) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
                 }
+
+                // Estado administrativo, separado del stock.
+                Text("Estado del producto: ${producto.estado}")
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    "Compra referencial: ${
+                        formatoPrecio.format(producto.precioCompra)
+                    }"
+                )
+
+                Text(
+                    "Venta referencial: ${
+                        formatoPrecio.format(producto.precioVenta)
+                    }"
+                )
+
+                Text(
+                    "Reposición sugerida: ${producto.cantidadReposicion}"
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Toca para editar",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
+
             IconButton(onClick = onEliminar) {
-                Icon(Icons.Default.Delete, contentDescription = "Eliminar producto")
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar producto"
+                )
             }
         }
     }

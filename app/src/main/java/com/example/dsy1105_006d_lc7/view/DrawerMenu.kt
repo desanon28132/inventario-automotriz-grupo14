@@ -90,6 +90,15 @@ fun DrawerMenu(
                     }
                 }
             )
+            NavigationDrawerItem(
+                label = { Text("Reposición") },
+                selected = false,
+                onClick = {
+                    navController.navigate("reposicion") {
+                        launchSingleTop = true
+                    }
+                }
+            )
 
 
             NavigationDrawerItem(

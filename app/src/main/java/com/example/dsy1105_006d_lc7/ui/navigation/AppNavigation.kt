@@ -20,6 +20,9 @@ import com.example.dsy1105_006d_lc7.ui.proveedor.ProveedorViewModel
 
 import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionScreen
 import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionViewModel
+
+import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionScreen
+import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionViewModel
 @Composable
 fun AppNavigation() {
 
@@ -93,6 +96,14 @@ fun AppNavigation() {
 
             UbicacionScreen(
                 viewModel = ubicacionViewModel,
+                onVolver = { navController.popBackStack() }
+            )
+        }
+        composable("reposicion") {
+            val reposicionViewModel: ReposicionViewModel = viewModel()
+
+            ReposicionScreen(
+                viewModel = reposicionViewModel,
                 onVolver = { navController.popBackStack() }
             )
         }

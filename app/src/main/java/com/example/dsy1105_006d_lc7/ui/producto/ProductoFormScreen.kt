@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.dsy1105_006d_lc7.data.local.calcularReposicion
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,14 +328,30 @@ fun ProductoFormScreen(
                 habilitado = habilitado
             )
 
-            CampoTexto(
-                "Cantidad sugerida de reposición",
-                state.cantidadReposicion,
-                viewModel::onCantidadReposicionChange,
-                state.cantidadReposicionError,
-                tipoTeclado = KeyboardType.Number,
-                habilitado = habilitado
-            )
+            val cantidadActual = state.cantidad.trim().toIntOrNull()
+            val minimoActual = state.stockMinimo.trim().toIntOrNull()
+
+            if (
+                cantidadActual != null &&
+                minimoActual != null &&
+                cantidadActual >= 0 &&
+                minimoActual >= 0
+            ) {
+                val necesitaReposicion =
+                    cantidadActual == 0 || cantidadActual < minimoActual
+
+                val objetivo = (minimoActual.toLong() * 2L)
+                    .coerceAtLeast(1L)
+                    .coerceAtMost(Int.MAX_VALUE.toLong())
+
+                val sugerida = if (necesitaReposicion) {
+                    (objetivo - cantidadActual).coerceAtLeast(0L)
+                } else {
+                    0L
+                }
+
+                Text("Reposición sugerida automáticamente: $sugerida")
+            }
 
             Spacer(Modifier.height(8.dp))
 

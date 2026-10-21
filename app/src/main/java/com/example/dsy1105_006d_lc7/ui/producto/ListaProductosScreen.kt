@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dsy1105_006d_lc7.data.local.ProductoEntity
-
+import com.example.dsy1105_006d_lc7.data.local.calcularReposicion
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaProductosScreen(
@@ -232,9 +232,16 @@ private fun ProductoItem(
                     }"
                 )
 
-                Text(
-                    "Reposición sugerida: ${producto.cantidadReposicion}"
-                )
+                val reposicionSugerida = if (
+                    producto.estado == "Activo" &&
+                    (producto.cantidad == 0 || producto.cantidad < producto.stockMinimo)
+                ) {
+                    calcularReposicion(producto)
+                } else {
+                    0
+                }
+
+                Text("Reposición sugerida: $reposicionSugerida")
 
                 Spacer(modifier = Modifier.height(4.dp))
 

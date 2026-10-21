@@ -12,11 +12,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductoEntity::class,
         MovimientoEntity::class,
         ProveedorEntity::class,
-        UbicacionEntity::class
+        UbicacionEntity::class,
+        SolicitudReposicionEntity::class
+
 
 
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun proveedorDao(): ProveedorDao
 
     abstract fun ubicacionDao(): UbicacionDao
+    abstract fun reposicionDao(): ReposicionDao
 
     companion object {
 
@@ -168,6 +171,25 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS solicitudes_reposicion (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                proveedorId INTEGER NOT NULL,
+                proveedorNombre TEXT NOT NULL,
+                proveedorCorreo TEXT NOT NULL,
+                detalle TEXT NOT NULL,
+                estado TEXT NOT NULL,
+                fechaCreacion INTEGER NOT NULL,
+                fechaActualizacion INTEGER NOT NULL
+            )
+            """.trimIndent()
+                )
+            }
+        }
 
 
 
@@ -184,7 +206,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_1_2,
                         MIGRATION_2_3,
                         MIGRATION_3_4,
-                        MIGRATION_4_5
+                        MIGRATION_4_5,
+                        MIGRATION_5_6
                     )
                     .build()
                     .also { INSTANCE = it }

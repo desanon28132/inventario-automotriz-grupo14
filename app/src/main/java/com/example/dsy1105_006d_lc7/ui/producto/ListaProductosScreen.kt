@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -18,16 +19,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dsy1105_006d_lc7.data.local.ProductoEntity
 import com.example.dsy1105_006d_lc7.data.local.calcularReposicion
+import com.example.dsy1105_006d_lc7.ui.theme.appTopBarColors
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaProductosScreen(
     viewModel: ProductoViewModel,
     onAgregar: () -> Unit,
     onEditar: (Int) -> Unit,
+    onEscanearQr: () -> Unit,
     onVolver: () -> Unit
 ) {
     val estado by viewModel.lista.collectAsState()
-    var productoAEliminar by remember { mutableStateOf<ProductoEntity?>(null) }
+    var productoAEliminar by remember {
+        mutableStateOf<ProductoEntity?>(null)
+    }
 
     Scaffold(
         topBar = {
@@ -35,14 +41,29 @@ fun ListaProductosScreen(
                 title = { Text("Productos") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
-                }
+                },
+                actions = {
+                    IconButton(onClick = onEscanearQr) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Escanear QR"
+                        )
+                    }
+                },
+                colors = appTopBarColors()
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAgregar) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar producto")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Agregar producto"
+                )
             }
         }
     ) { padding ->
@@ -56,18 +77,29 @@ fun ListaProductosScreen(
                 value = estado.busqueda,
                 onValueChange = viewModel::onBusquedaChange,
                 label = { Text("Buscar por nombre o código") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null
+                    )
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(12.dp))
 
             if (estado.productos.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        if (estado.busqueda.isBlank())
+                        if (estado.busqueda.isBlank()) {
                             "Aún no hay productos.\nPresiona + para agregar uno."
-                        else "Sin resultados para la búsqueda"
+                        } else {
+                            "Sin resultados para la búsqueda"
+                        }
                     )
                 }
             } else {
@@ -75,7 +107,10 @@ fun ListaProductosScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 88.dp)
                 ) {
-                    items(estado.productos, key = { it.id }) { producto ->
+                    items(
+                        items = estado.productos,
+                        key = { it.id }
+                    ) { producto ->
                         ProductoItem(
                             producto = producto,
                             onEditar = { onEditar(producto.id) },
@@ -89,17 +124,33 @@ fun ListaProductosScreen(
 
     productoAEliminar?.let { producto ->
         AlertDialog(
-            onDismissRequest = { productoAEliminar = null },
-            title = { Text("Eliminar producto") },
-            text = { Text("¿Seguro que quieres eliminar \"${producto.nombre}\"?") },
+            onDismissRequest = {
+                productoAEliminar = null
+            },
+            title = {
+                Text("Eliminar producto")
+            },
+            text = {
+                Text("¿Seguro que quieres eliminar \"${producto.nombre}\"?")
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.eliminar(producto)
-                    productoAEliminar = null
-                }) { Text("Eliminar") }
+                TextButton(
+                    onClick = {
+                        viewModel.eliminar(producto)
+                        productoAEliminar = null
+                    }
+                ) {
+                    Text("Eliminar")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { productoAEliminar = null }) { Text("Cancelar") }
+                TextButton(
+                    onClick = {
+                        productoAEliminar = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
             }
         )
     }
@@ -111,7 +162,6 @@ private fun ProductoItem(
     onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
-    // Clasificación según las existencias.
     val agotado = producto.cantidad == 0
 
     val stockBajo = producto.cantidad > 0 &&
@@ -125,7 +175,6 @@ private fun ProductoItem(
         else -> "Disponible"
     }
 
-    // Formato de moneda chilena, sin decimales.
     val formatoPrecio = remember {
         java.text.NumberFormat.getCurrencyInstance(
             java.util.Locale("es", "CL")
@@ -135,11 +184,18 @@ private fun ProductoItem(
         }
     }
 
+    val reposicionSugerida = if (
+        producto.estado == "Activo" && requiereAtencion
+    ) {
+        calcularReposicion(producto)
+    } else {
+        0
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onEditar() },
-
         colors = CardDefaults.cardColors(
             containerColor = if (requiereAtencion) {
                 MaterialTheme.colorScheme.errorContainer
@@ -172,13 +228,7 @@ private fun ProductoItem(
                 }
 
                 Text("Categoría: ${producto.categoria}")
-
-                Text(
-                    "Marca: ${
-                        producto.marca.ifBlank { "Sin registrar" }
-                    }"
-                )
-
+                Text("Marca: ${producto.marca.ifBlank { "Sin registrar" }}")
                 Text("Unidad de medida: ${producto.unidadMedida}")
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -215,7 +265,6 @@ private fun ProductoItem(
                     )
                 }
 
-                // Estado administrativo, separado del stock.
                 Text("Estado del producto: ${producto.estado}")
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -231,15 +280,6 @@ private fun ProductoItem(
                         formatoPrecio.format(producto.precioVenta)
                     }"
                 )
-
-                val reposicionSugerida = if (
-                    producto.estado == "Activo" &&
-                    (producto.cantidad == 0 || producto.cantidad < producto.stockMinimo)
-                ) {
-                    calcularReposicion(producto)
-                } else {
-                    0
-                }
 
                 Text("Reposición sugerida: $reposicionSugerida")
 

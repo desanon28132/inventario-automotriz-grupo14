@@ -7,41 +7,37 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.dsy1105_006d_lc7.ui.login.HomeScreen
+import com.example.dsy1105_006d_lc7.ui.login.LoginScreen
+import com.example.dsy1105_006d_lc7.ui.menu.MenuScreen
 import com.example.dsy1105_006d_lc7.ui.movimiento.MovimientoScreen
 import com.example.dsy1105_006d_lc7.ui.movimiento.MovimientoViewModel
 import com.example.dsy1105_006d_lc7.ui.producto.ListaProductosScreen
 import com.example.dsy1105_006d_lc7.ui.producto.ProductoFormScreen
 import com.example.dsy1105_006d_lc7.ui.producto.ProductoViewModel
-import com.example.dsy1105_006d_lc7.view.DrawerMenu
-
 import com.example.dsy1105_006d_lc7.ui.proveedor.ProveedorScreen
 import com.example.dsy1105_006d_lc7.ui.proveedor.ProveedorViewModel
-
+import com.example.dsy1105_006d_lc7.ui.qr.QrScannerScreen
+import com.example.dsy1105_006d_lc7.ui.qr.QrViewModel
+import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionScreen
+import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionViewModel
 import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionScreen
 import com.example.dsy1105_006d_lc7.ui.ubicacion.UbicacionViewModel
 
-import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionScreen
-import com.example.dsy1105_006d_lc7.ui.reposicion.ReposicionViewModel
 @Composable
 fun AppNavigation() {
-
     val navController = rememberNavController()
 
-    // Compartido entre la lista y el formulario de productos.
+    // Compartido entre la lista, el formulario y la navegación desde QR.
     val productoViewModel: ProductoViewModel = viewModel()
 
     NavHost(
         navController = navController,
         startDestination = "login"
     ) {
-
-        // Inicio de sesión.
         composable("login") {
-            HomeScreen(navController = navController)
+            LoginScreen(navController = navController)
         }
 
-        // Menú principal.
         composable(
             route = "DrawerMenu/{username}",
             arguments = listOf(
@@ -50,65 +46,36 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-
             val username = backStackEntry.arguments
                 ?.getString("username")
                 .orEmpty()
 
-            DrawerMenu(
+            MenuScreen(
                 username = username,
                 navController = navController
             )
         }
 
-        // Lista de productos.
         composable("lista_productos") {
-
             ListaProductosScreen(
                 viewModel = productoViewModel,
-
                 onAgregar = {
                     productoViewModel.nuevoProducto()
                     navController.navigate("producto_form/0")
                 },
-
                 onEditar = { id ->
                     productoViewModel.cargarProducto(id)
                     navController.navigate("producto_form/$id")
                 },
-
+                onEscanearQr = {
+                    navController.navigate("qr_scanner")
+                },
                 onVolver = {
                     navController.popBackStack()
                 }
             )
         }
-        composable("proveedores") {
-            val proveedorViewModel: ProveedorViewModel = viewModel()
 
-            ProveedorScreen(
-                viewModel = proveedorViewModel,
-                onVolver = { navController.popBackStack() }
-            )
-        }
-
-        composable("ubicaciones") {
-            val ubicacionViewModel: UbicacionViewModel = viewModel()
-
-            UbicacionScreen(
-                viewModel = ubicacionViewModel,
-                onVolver = { navController.popBackStack() }
-            )
-        }
-        composable("reposicion") {
-            val reposicionViewModel: ReposicionViewModel = viewModel()
-
-            ReposicionScreen(
-                viewModel = reposicionViewModel,
-                onVolver = { navController.popBackStack() }
-            )
-        }
-
-        // Formulario para crear o editar productos.
         composable(
             route = "producto_form/{id}",
             arguments = listOf(
@@ -117,7 +84,6 @@ fun AppNavigation() {
                 }
             )
         ) {
-
             ProductoFormScreen(
                 viewModel = productoViewModel,
                 onVolver = {
@@ -126,7 +92,6 @@ fun AppNavigation() {
             )
         }
 
-        // Registro de movimientos e historial.
         composable(
             route = "movimientos/{username}",
             arguments = listOf(
@@ -135,7 +100,6 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-
             val username = backStackEntry.arguments
                 ?.getString("username")
                 .orEmpty()
@@ -151,6 +115,57 @@ fun AppNavigation() {
             )
         }
 
-    } // Fin de NavHost.
+        composable("proveedores") {
+            val proveedorViewModel: ProveedorViewModel = viewModel()
 
-} // Fin de AppNavigation.
+            ProveedorScreen(
+                viewModel = proveedorViewModel,
+                onVolver = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("ubicaciones") {
+            val ubicacionViewModel: UbicacionViewModel = viewModel()
+
+            UbicacionScreen(
+                viewModel = ubicacionViewModel,
+                onVolver = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("reposicion") {
+            val reposicionViewModel: ReposicionViewModel = viewModel()
+
+            ReposicionScreen(
+                viewModel = reposicionViewModel,
+                onVolver = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("qr_scanner") {
+            val qrViewModel: QrViewModel = viewModel()
+
+            QrScannerScreen(
+                viewModel = qrViewModel,
+                onVolver = {
+                    navController.popBackStack()
+                },
+                onEditarProducto = { id ->
+                    productoViewModel.cargarProducto(id)
+                    navController.navigate("producto_form/$id")
+                },
+                onRegistrarProducto = { codigo ->
+                    productoViewModel.nuevoProducto()
+                    productoViewModel.onCodigoChange(codigo)
+                    navController.navigate("producto_form/0")
+                }
+            )
+        }
+    }
+}

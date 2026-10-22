@@ -1,4 +1,6 @@
-package com.example.dsy1105_006d_lc7.data.model
+package com.example.dsy1105_006d_lc7.data.repository
+
+import com.example.dsy1105_006d_lc7.data.model.Credential
 
 class AuthRepository (
     private val validCredential: Credential = Credential.Admin

@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.dsy1105_006d_lc7.data.local.calcularReposicion
+import com.example.dsy1105_006d_lc7.ui.theme.appTopBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +76,8 @@ fun ProductoFormScreen(
                             contentDescription = "Volver"
                         )
                     }
-                }
+                },
+                colors = appTopBarColors()
             )
         }
     ) { padding ->

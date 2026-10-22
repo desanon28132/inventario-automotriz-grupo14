@@ -1,43 +1,36 @@
 package com.example.dsy1105_006d_lc7.ui.login
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.example.dsy1105_006d_lc7.data.model.AuthRepository
+import com.example.dsy1105_006d_lc7.data.repository.AuthRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
-class LoginViewModel (
-    private val repo: AuthRepository= AuthRepository()
-): ViewModel(){
+class LoginViewModel(
+    private val repo: AuthRepository = AuthRepository()
+) : ViewModel() {
 
-    var uiState by mutableStateOf(LoginUiState())
-        private set
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun onUsernameChange(value:String){
-        uiState = uiState.copy(username=value, error=null)
+    fun onUsernameChange(value: String) {
+        _uiState.update { it.copy(username = value, error = null) }
     }
-    /// Hasta aqui
 
-    fun onPasswordChange(value: String){
-        uiState=uiState.copy(password = value, error=null)
+    fun onPasswordChange(value: String) {
+        _uiState.update { it.copy(password = value, error = null) }
     }
 
-    fun submit(onSuccess:(String)  -> Unit) {
+    fun submit(onSuccess: (String) -> Unit) {
+        _uiState.update { it.copy(isLoading = true, error = null) }
 
-        uiState=uiState.copy(isLoading = true, error=null)
+        val usuario = _uiState.value.username.trim()
+        val ok = repo.login(usuario, _uiState.value.password)
 
-        val ok =repo.login(uiState.username.trim(), uiState.password)
+        _uiState.update { it.copy(isLoading = false) }
 
-        uiState=uiState.copy(isLoading = false)
-
-        if (ok) onSuccess(uiState.username.trim())
-        else uiState=uiState.copy(error="Credenciales Invalidas")
-
-    }   //fin unit
-
-
-
-
-
-
-}// fin viewmodel
+        if (ok) onSuccess(usuario)
+        else _uiState.update { it.copy(error = "Credenciales inválidas") }
+    }
+}  // fin viewmodel

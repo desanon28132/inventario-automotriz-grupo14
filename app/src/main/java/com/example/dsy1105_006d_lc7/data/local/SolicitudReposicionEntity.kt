@@ -1,5 +1,6 @@
 package com.example.dsy1105_006d_lc7.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -13,8 +14,10 @@ data class SolicitudReposicionEntity(
     val proveedorCorreo: String,
 
     val detalle: String,
-
     val estado: String = "Pendiente",
     val fechaCreacion: Long,
-    val fechaActualizacion: Long
+    val fechaActualizacion: Long,
+
+    @ColumnInfo(defaultValue = "''")
+    val observaciones: String = ""
 )

@@ -44,5 +44,7 @@ data class ProductoUiState(
 
 data class ListaProductosUiState(
     val productos: List<ProductoEntity> = emptyList(),
-    val busqueda: String = ""
+    val busqueda: String = "",
+    val categorias: List<String> = emptyList(),
+    val categoriaSeleccionada: String? = null
 )

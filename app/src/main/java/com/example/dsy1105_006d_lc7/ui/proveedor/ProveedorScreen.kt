@@ -22,6 +22,11 @@ fun ProveedorScreen(
 ) {
     val estado by viewModel.estado.collectAsState()
     val proveedores by viewModel.proveedores.collectAsState()
+    val productos by viewModel.productos.collectAsState()
+
+    val productosPorProveedor = remember(productos) {
+        productos.groupBy { it.proveedorId }
+    }
     val habilitado = !estado.guardando
 
     Scaffold(
@@ -97,6 +102,30 @@ fun ProveedorScreen(
                         enabled = habilitado,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    OutlinedTextField(
+                        value = estado.observaciones,
+                        onValueChange = viewModel::onObservacionesChange,
+                        label = { Text("Observaciones") },
+                        placeholder = {
+                            Text("Ejemplo: atiende de lunes a viernes")
+                        },
+                        minLines = 2,
+                        enabled = habilitado,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = estado.condicionesCompra,
+                        onValueChange = viewModel::onCondicionesCompraChange,
+                        label = { Text("Condiciones referenciales de compra") },
+                        placeholder = {
+                            Text("Ejemplo: pago al contado y entrega en 3 días")
+                        },
+                        minLines = 2,
+                        enabled = habilitado,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -181,6 +210,43 @@ fun ProveedorScreen(
 
                         Text("Código: ${proveedor.codigo}")
                         Text("Correo: ${proveedor.correo}")
+                        Text(
+                            text = "Observaciones: ${
+                                proveedor.observaciones.ifBlank { "Sin registrar" }
+                            }"
+                        )
+
+                        Text(
+                            text = "Condiciones de compra: ${
+                                proveedor.condicionesCompra.ifBlank { "Sin registrar" }
+                            }"
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val asociados = productosPorProveedor[proveedor.id].orEmpty()
+
+                        Text(
+                            text = "Productos asociados (${asociados.size})",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        if (asociados.isEmpty()) {
+                            Text(
+                                text = "Todavía no tiene productos asociados. " +
+                                        "Selecciona este proveedor en el formulario de un producto.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            asociados.forEach { producto ->
+                                Text(
+                                    text = "• ${producto.codigo} — ${producto.nombre}\n" +
+                                            "Categoría: ${producto.categoria} · " +
+                                            "Stock: ${producto.cantidad} ${producto.unidadMedida}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
 
                         Text(
                             if (proveedor.activo) "Estado: Activo"

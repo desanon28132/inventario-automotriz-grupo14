@@ -31,6 +31,9 @@ fun ListaProductosScreen(
     onVolver: () -> Unit
 ) {
     val estado by viewModel.lista.collectAsState()
+    var menuCategoriasAbierto by remember {
+        mutableStateOf(false)
+    }
     var productoAEliminar by remember {
         mutableStateOf<ProductoEntity?>(null)
     }
@@ -88,6 +91,63 @@ fun ListaProductosScreen(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { menuCategoriasAbierto = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Categoría: ${
+                            estado.categoriaSeleccionada ?: "Todas"
+                        }"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuCategoriasAbierto,
+                    onDismissRequest = {
+                        menuCategoriasAbierto = false
+                    }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Todas las categorías") },
+                        onClick = {
+                            viewModel.onFiltroCategoriaChange(null)
+                            menuCategoriasAbierto = false
+                        }
+                    )
+
+                    estado.categorias.forEach { categoria ->
+                        DropdownMenuItem(
+                            text = { Text(categoria) },
+                            onClick = {
+                                viewModel.onFiltroCategoriaChange(categoria)
+                                menuCategoriasAbierto = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (
+                estado.busqueda.isNotEmpty() ||
+                estado.categoriaSeleccionada != null
+            ) {
+                TextButton(
+                    onClick = {
+                        viewModel.limpiarFiltros()
+                    }
+                ) {
+                    Text("Limpiar filtros")
+                }
+            }
+
+            Text(
+                text = "Productos encontrados: ${estado.productos.size}",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (estado.productos.isEmpty()) {
                 Box(
@@ -95,12 +155,16 @@ fun ListaProductosScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        if (estado.busqueda.isBlank()) {
+                        text = if (
+                            estado.busqueda.isBlank() &&
+                            estado.categoriaSeleccionada == null
+                        ) {
                             "Aún no hay productos.\nPresiona + para agregar uno."
                         } else {
-                            "Sin resultados para la búsqueda"
+                            "No hay productos que coincidan con los filtros."
                         }
                     )
+
                 }
             } else {
                 LazyColumn(
@@ -191,6 +255,20 @@ private fun ProductoItem(
     } else {
         0
     }
+    val formatoFecha = remember {
+        java.text.SimpleDateFormat(
+            "dd/MM/yyyy HH:mm",
+            java.util.Locale.forLanguageTag("es-CL")
+        )
+    }
+
+    val ultimoIngreso = producto.fechaUltimoIngreso?.let { fecha ->
+        formatoFecha.format(java.util.Date(fecha))
+    } ?: "Sin ingresos registrados"
+
+    val ultimaSalida = producto.fechaUltimaSalida?.let { fecha ->
+        formatoFecha.format(java.util.Date(fecha))
+    } ?: "Sin salidas registradas"
 
     Card(
         modifier = Modifier
@@ -282,6 +360,24 @@ private fun ProductoItem(
                 )
 
                 Text("Reposición sugerida: $reposicionSugerida")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Últimos movimientos",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Último ingreso: $ultimoIngreso",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    text = "Última salida: $ultimaSalida",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
 
                 Spacer(modifier = Modifier.height(4.dp))
 

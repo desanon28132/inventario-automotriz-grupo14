@@ -150,6 +150,19 @@ abstract class ReposicionDao {
             fecha = System.currentTimeMillis()
         )
     }
+    @Query(
+        """
+    UPDATE solicitudes_reposicion
+    SET observaciones = :observaciones,
+        fechaActualizacion = :fecha
+    WHERE id = :id
+    """
+    )
+    abstract suspend fun actualizarObservaciones(
+        id: Int,
+        observaciones: String,
+        fecha: Long
+    ): Int
 }
 
 // Regla académica provisional compartida por DAO y pantalla.

@@ -22,6 +22,8 @@ data class ProveedorUiState(
     val nombre: String = "",
     val correo: String = "",
     val activo: Boolean = true,
+    val observaciones: String = "",
+    val condicionesCompra: String = "",
     val guardando: Boolean = false,
     val error: String? = null,
     val mensaje: String? = null
@@ -43,6 +45,35 @@ class ProveedorViewModel(application: Application) :
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
+    val productos = AppDatabase
+        .getDatabase(application)
+        .productoDao()
+        .observarTodos()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+
+    fun onObservacionesChange(valor: String) {
+        _estado.update {
+            it.copy(
+                observaciones = valor,
+                error = null,
+                mensaje = null
+            )
+        }
+    }
+
+    fun onCondicionesCompraChange(valor: String) {
+        _estado.update {
+            it.copy(
+                condicionesCompra = valor,
+                error = null,
+                mensaje = null
+            )
+        }
+    }
 
     fun onCodigoChange(valor: String) {
         _estado.update {
@@ -80,7 +111,9 @@ class ProveedorViewModel(application: Application) :
             codigo = proveedor.codigo,
             nombre = proveedor.nombre,
             correo = proveedor.correo,
-            activo = proveedor.activo
+            activo = proveedor.activo,
+            observaciones = proveedor.observaciones,
+            condicionesCompra = proveedor.condicionesCompra
         )
     }
 
@@ -125,7 +158,9 @@ class ProveedorViewModel(application: Application) :
                     codigo = codigo,
                     nombre = s.nombre.trim(),
                     correo = s.correo.trim(),
-                    activo = s.activo
+                    activo = s.activo,
+                    observaciones = s.observaciones.trim(),
+                    condicionesCompra = s.condicionesCompra.trim()
                 )
 
                 if (s.id == 0) {

@@ -55,6 +55,25 @@ class ReposicionViewModel(application: Application) :
             dao.avanzarEstado(id)
         }
     }
+    fun guardarObservaciones(
+        id: Int,
+        observaciones: String,
+        onGuardado: () -> Unit
+    ) {
+        ejecutar("Observaciones guardadas correctamente") {
+            val actualizadas = dao.actualizarObservaciones(
+                id = id,
+                observaciones = observaciones.trim(),
+                fecha = System.currentTimeMillis()
+            )
+
+            require(actualizadas == 1) {
+                "La solicitud ya no existe"
+            }
+
+            onGuardado()
+        }
+    }
 
     private fun ejecutar(
         mensajeExito: String,

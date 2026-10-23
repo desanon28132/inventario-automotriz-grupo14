@@ -14,6 +14,7 @@ import com.example.dsy1105_006d_lc7.data.local.calcularReposicion
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,16 @@ fun ReposicionScreen(
     }
     var solicitudAConfirmar by remember {
         mutableStateOf<SolicitudReposicionEntity?>(null)
+    }
+    var solicitudParaCorreo by remember {
+        mutableStateOf<SolicitudReposicionEntity?>(null)
+    }
+    var solicitudObservacionesId by rememberSaveable {
+        mutableStateOf<Int?>(null)
+    }
+
+    var textoObservaciones by rememberSaveable {
+        mutableStateOf("")
     }
 
     val grupos = pendientes.groupBy { it.proveedorId }
@@ -227,6 +238,31 @@ fun ReposicionScreen(
                                 )
 
                                 Text(solicitud.detalle)
+                                OutlinedButton(
+                                    onClick = {
+                                        solicitudParaCorreo = solicitud
+                                    },
+                                    enabled = !procesando,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Preparar correo")
+                                }
+                                Text(
+                                    text = "Observaciones: ${
+                                        solicitud.observaciones.ifBlank { "Sin observaciones" }
+                                    }"
+                                )
+
+                                OutlinedButton(
+                                    onClick = {
+                                        textoObservaciones = solicitud.observaciones
+                                        solicitudObservacionesId = solicitud.id
+                                    },
+                                    enabled = !procesando,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Editar observaciones")
+                                }
 
                                 val siguiente = siguienteEstado(
                                     solicitud.estado
@@ -249,6 +285,73 @@ fun ReposicionScreen(
                 }
             }
         }
+    }
+    solicitudParaCorreo?.let { solicitud ->
+        key(solicitud.id) {
+            CorreoReposicionDialog(
+                solicitud = solicitud,
+                onCerrar = {
+                    solicitudParaCorreo = null
+                }
+            )
+        }
+    }
+    solicitudObservacionesId?.let { solicitudId ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!procesando) {
+                    solicitudObservacionesId = null
+                }
+            },
+            title = {
+                Text("Observaciones de la solicitud")
+            },
+            text = {
+                OutlinedTextField(
+                    value = textoObservaciones,
+                    onValueChange = {
+                        textoObservaciones = it
+                    },
+                    label = { Text("Observaciones opcionales") },
+                    placeholder = {
+                        Text("Ejemplo: solicitar entrega durante la mañana")
+                    },
+                    minLines = 3,
+                    maxLines = 6,
+                    enabled = !procesando,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.guardarObservaciones(
+                            id = solicitudId,
+                            observaciones = textoObservaciones,
+                            onGuardado = {
+                                solicitudObservacionesId = null
+                            }
+                        )
+                    },
+                    enabled = !procesando
+                ) {
+                    Text(
+                        if (procesando) "Guardando..."
+                        else "Guardar"
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        solicitudObservacionesId = null
+                    },
+                    enabled = !procesando
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     proveedorAConfirmar?.let { proveedorId ->

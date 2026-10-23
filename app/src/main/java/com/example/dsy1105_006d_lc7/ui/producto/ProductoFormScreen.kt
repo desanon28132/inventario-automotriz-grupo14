@@ -1,38 +1,57 @@
+
 package com.example.dsy1105_006d_lc7.ui.producto
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.dsy1105_006d_lc7.ui.theme.appTopBarColors
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductoFormScreen(
     viewModel: ProductoViewModel,
+    onEscanearCodigo: () -> Unit,
     onVolver: () -> Unit
 ) {
     val state by viewModel.form.collectAsState()
+
     val proveedores by viewModel.proveedores.collectAsState()
+    val ubicaciones by viewModel.ubicaciones.collectAsState()
 
     var menuProveedorAbierto by remember {
         mutableStateOf(false)
     }
 
-    val proveedorSeleccionado = proveedores.firstOrNull {
-        it.id == state.proveedorId
-    }
-    val ubicaciones by viewModel.ubicaciones.collectAsState()
-
     var menuUbicacionAbierto by remember {
         mutableStateOf(false)
+    }
+
+    var menuEstadoAbierto by remember {
+        mutableStateOf(false)
+    }
+
+    val proveedorSeleccionado = proveedores.firstOrNull {
+        it.id == state.proveedorId
     }
 
     val ubicacionSeleccionada = ubicaciones.firstOrNull {
@@ -40,16 +59,15 @@ fun ProductoFormScreen(
     }
 
     val formatoFechaUbicacion = remember {
-        java.text.SimpleDateFormat(
+        SimpleDateFormat(
             "dd/MM/yyyy HH:mm",
-            java.util.Locale("es", "CL")
+            Locale("es", "CL")
         )
     }
 
-    var menuEstadoAbierto by remember { mutableStateOf(false) }
-
     val habilitado = !state.cargando && !state.guardando
 
+    // Volver a la lista cuando se guarda correctamente
     LaunchedEffect(state.guardadoExitosamente) {
         if (state.guardadoExitosamente) {
             viewModel.consumirGuardado()
@@ -62,8 +80,11 @@ fun ProductoFormScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (state.esEdicion) "Editar producto"
-                        else "Nuevo producto"
+                        if (state.esEdicion) {
+                            "Editar producto"
+                        } else {
+                            "Nuevo producto"
+                        }
                     )
                 },
                 navigationIcon = {
@@ -81,6 +102,7 @@ fun ProductoFormScreen(
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -90,60 +112,94 @@ fun ProductoFormScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+
+            // ESTADO DE CARGA
+
             if (state.cargando) {
                 CircularProgressIndicator()
                 Text("Cargando producto...")
             }
 
-            state.errorGeneral?.let {
+            state.errorGeneral?.let { error ->
                 Text(
-                    text = it,
+                    text = error,
                     color = MaterialTheme.colorScheme.error
                 )
             }
 
+            // INFORMACIÓN DEL PRODUCTO
+
             Text(
-                "Información del producto",
+                text = "Información del producto",
                 style = MaterialTheme.typography.titleMedium
             )
 
+            // Código + lector QR
+
             CampoTexto(
-                "Código", state.codigo,
-                viewModel::onCodigoChange, state.codigoError,
+                label = "Código",
+                valor = state.codigo,
+                onChange = viewModel::onCodigoChange,
+                error = state.codigoError,
+                iconoInicial = Icons.Default.Inventory2,
+                habilitado = habilitado,
+                trailingIcon = {
+                    IconButton(
+                        onClick = onEscanearCodigo,
+                        enabled = habilitado
+                    ) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Escanear código QR"
+                        )
+                    }
+                }
+            )
+
+            CampoTexto(
+                label = "Nombre",
+                valor = state.nombre,
+                onChange = viewModel::onNombreChange,
+                error = state.nombreError,
+                iconoInicial = Icons.Default.Edit,
                 habilitado = habilitado
             )
 
             CampoTexto(
-                "Nombre", state.nombre,
-                viewModel::onNombreChange, state.nombreError,
+                label = "Descripción",
+                valor = state.descripcion,
+                onChange = viewModel::onDescripcionChange,
+                error = state.descripcionError,
+                iconoInicial = Icons.Default.Edit,
                 habilitado = habilitado
             )
 
             CampoTexto(
-                "Descripción", state.descripcion,
-                viewModel::onDescripcionChange, state.descripcionError,
+                label = "Categoría",
+                valor = state.categoria,
+                onChange = viewModel::onCategoriaChange,
+                error = state.categoriaError,
+                iconoInicial = Icons.Default.Category,
                 habilitado = habilitado
             )
 
             CampoTexto(
-                "Categoría", state.categoria,
-                viewModel::onCategoriaChange, state.categoriaError,
+                label = "Marca",
+                valor = state.marca,
+                onChange = viewModel::onMarcaChange,
+                error = state.marcaError,
                 habilitado = habilitado
             )
 
             CampoTexto(
-                "Marca", state.marca,
-                viewModel::onMarcaChange, state.marcaError,
+                label = "Unidad de medida (Unidad, Litro, etc.)",
+                valor = state.unidadMedida,
+                onChange = viewModel::onUnidadMedidaChange,
+                error = state.unidadMedidaError,
                 habilitado = habilitado
             )
 
-            CampoTexto(
-                "Unidad de medida (Unidad, Litro, etc.)",
-                state.unidadMedida,
-                viewModel::onUnidadMedidaChange,
-                state.unidadMedidaError,
-                habilitado = habilitado
-            )
+            // ESTADO DEL PRODUCTO
 
             Box {
                 OutlinedButton(
@@ -156,22 +212,31 @@ fun ProductoFormScreen(
 
                 DropdownMenu(
                     expanded = menuEstadoAbierto,
-                    onDismissRequest = { menuEstadoAbierto = false }
+                    onDismissRequest = {
+                        menuEstadoAbierto = false
+                    }
                 ) {
-                    listOf("Activo", "Inactivo", "Descontinuado")
-                        .forEach { opcion ->
-                            DropdownMenuItem(
-                                text = { Text(opcion) },
-                                onClick = {
-                                    viewModel.onEstadoChange(opcion)
-                                    menuEstadoAbierto = false
-                                }
-                            )
-                        }
+                    listOf(
+                        "Activo",
+                        "Inactivo",
+                        "Descontinuado"
+                    ).forEach { opcion ->
+
+                        DropdownMenuItem(
+                            text = { Text(opcion) },
+                            onClick = {
+                                viewModel.onEstadoChange(opcion)
+                                menuEstadoAbierto = false
+                            }
+                        )
+                    }
                 }
             }
 
             Spacer(Modifier.height(8.dp))
+
+            // PROVEEDOR
+
             Text(
                 text = "Proveedor principal",
                 style = MaterialTheme.typography.titleMedium
@@ -179,23 +244,32 @@ fun ProductoFormScreen(
 
             Box {
                 OutlinedButton(
-                    onClick = { menuProveedorAbierto = true },
+                    onClick = {
+                        menuProveedorAbierto = true
+                    },
                     enabled = habilitado,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         proveedorSeleccionado?.let {
-                            "${it.nombre}${if (!it.activo) " (inactivo)" else ""}"
+                            "${it.nombre}${
+                                if (!it.activo) " (inactivo)"
+                                else ""
+                            }"
                         } ?: "Sin proveedor asignado"
                     )
                 }
 
                 DropdownMenu(
                     expanded = menuProveedorAbierto,
-                    onDismissRequest = { menuProveedorAbierto = false }
+                    onDismissRequest = {
+                        menuProveedorAbierto = false
+                    }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Sin proveedor asignado") },
+                        text = {
+                            Text("Sin proveedor asignado")
+                        },
                         onClick = {
                             viewModel.onProveedorChange(null)
                             menuProveedorAbierto = false
@@ -205,12 +279,17 @@ fun ProductoFormScreen(
                     proveedores
                         .filter { it.activo }
                         .forEach { proveedor ->
+
                             DropdownMenuItem(
                                 text = {
-                                    Text("${proveedor.codigo} - ${proveedor.nombre}")
+                                    Text(
+                                        "${proveedor.codigo} - ${proveedor.nombre}"
+                                    )
                                 },
                                 onClick = {
-                                    viewModel.onProveedorChange(proveedor.id)
+                                    viewModel.onProveedorChange(
+                                        proveedor.id
+                                    )
                                     menuProveedorAbierto = false
                                 }
                             )
@@ -224,6 +303,11 @@ fun ProductoFormScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            // UBICACIÓN
+
             Text(
                 text = "Ubicación en bodega",
                 style = MaterialTheme.typography.titleMedium
@@ -231,7 +315,9 @@ fun ProductoFormScreen(
 
             Box {
                 OutlinedButton(
-                    onClick = { menuUbicacionAbierto = true },
+                    onClick = {
+                        menuUbicacionAbierto = true
+                    },
                     enabled = habilitado,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -244,10 +330,14 @@ fun ProductoFormScreen(
 
                 DropdownMenu(
                     expanded = menuUbicacionAbierto,
-                    onDismissRequest = { menuUbicacionAbierto = false }
+                    onDismissRequest = {
+                        menuUbicacionAbierto = false
+                    }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Sin ubicación asignada") },
+                        text = {
+                            Text("Sin ubicación asignada")
+                        },
                         onClick = {
                             viewModel.onUbicacionChange(null)
                             menuUbicacionAbierto = false
@@ -255,6 +345,7 @@ fun ProductoFormScreen(
                     )
 
                     ubicaciones.forEach { ubicacion ->
+
                         DropdownMenuItem(
                             text = {
                                 Text(
@@ -265,7 +356,9 @@ fun ProductoFormScreen(
                                 )
                             },
                             onClick = {
-                                viewModel.onUbicacionChange(ubicacion.id)
+                                viewModel.onUbicacionChange(
+                                    ubicacion.id
+                                )
                                 menuUbicacionAbierto = false
                             }
                         )
@@ -283,7 +376,7 @@ fun ProductoFormScreen(
             state.fechaCambioUbicacion?.let { fecha ->
                 Text(
                     text = "Último cambio guardado: ${
-                        formatoFechaUbicacion.format(java.util.Date(fecha))
+                        formatoFechaUbicacion.format(Date(fecha))
                     }",
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -296,9 +389,12 @@ fun ProductoFormScreen(
                 )
             }
 
+            Spacer(Modifier.height(8.dp))
+
+            // EXISTENCIAS
 
             Text(
-                "Existencias",
+                text = "Existencias",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -311,9 +407,12 @@ fun ProductoFormScreen(
                 valor = state.cantidad,
                 onChange = viewModel::onCantidadChange,
                 error = state.cantidadError,
+                iconoInicial = Icons.Default.ShoppingCart,
                 tipoTeclado = KeyboardType.Number,
                 habilitado = habilitado && !state.esEdicion
             )
+
+            // No permitir editar stock directamente
 
             if (state.esEdicion) {
                 Text(
@@ -323,14 +422,22 @@ fun ProductoFormScreen(
             }
 
             CampoTexto(
-                "Stock mínimo", state.stockMinimo,
-                viewModel::onStockMinimoChange, state.stockMinimoError,
+                label = "Stock mínimo",
+                valor = state.stockMinimo,
+                onChange = viewModel::onStockMinimoChange,
+                error = state.stockMinimoError,
+                iconoInicial = Icons.Default.Warning,
                 tipoTeclado = KeyboardType.Number,
                 habilitado = habilitado
             )
 
-            val cantidadActual = state.cantidad.trim().toIntOrNull()
-            val minimoActual = state.stockMinimo.trim().toIntOrNull()
+            // CÁLCULO DE REPOSICIÓN
+
+            val cantidadActual =
+                state.cantidad.trim().toIntOrNull()
+
+            val minimoActual =
+                state.stockMinimo.trim().toIntOrNull()
 
             if (
                 cantidadActual != null &&
@@ -339,45 +446,60 @@ fun ProductoFormScreen(
                 minimoActual >= 0
             ) {
                 val necesitaReposicion =
-                    cantidadActual == 0 || cantidadActual < minimoActual
+                    cantidadActual <= minimoActual
 
-                val objetivo = (minimoActual.toLong() * 2L)
-                    .coerceAtLeast(1L)
-                    .coerceAtMost(Int.MAX_VALUE.toLong())
+                val objetivo =
+                    (minimoActual.toLong() * 2L)
+                        .coerceAtLeast(1L)
+                        .coerceAtMost(Int.MAX_VALUE.toLong())
 
                 val sugerida = if (necesitaReposicion) {
-                    (objetivo - cantidadActual).coerceAtLeast(0L)
+                    (objetivo - cantidadActual)
+                        .coerceAtLeast(0L)
                 } else {
                     0L
                 }
 
-                Text("Reposición sugerida automáticamente: $sugerida")
+                Text(
+                    text = "Reposición sugerida automáticamente: $sugerida"
+                )
             }
 
             Spacer(Modifier.height(8.dp))
 
+            // PRECIOS
+
             Text(
-                "Precios referenciales",
+                text = "Precios referenciales",
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Text("Escribe pesos chilenos sin puntos ni comas.")
+            Text(
+                text = "Escribe pesos chilenos sin puntos ni comas.",
+                style = MaterialTheme.typography.bodySmall
+            )
 
             CampoTexto(
-                "Precio de compra", state.precioCompra,
-                viewModel::onPrecioCompraChange, state.precioCompraError,
+                label = "Precio de compra",
+                valor = state.precioCompra,
+                onChange = viewModel::onPrecioCompraChange,
+                error = state.precioCompraError,
                 tipoTeclado = KeyboardType.Number,
                 habilitado = habilitado
             )
 
             CampoTexto(
-                "Precio de venta", state.precioVenta,
-                viewModel::onPrecioVentaChange, state.precioVentaError,
+                label = "Precio de venta",
+                valor = state.precioVenta,
+                onChange = viewModel::onPrecioVentaChange,
+                error = state.precioVentaError,
                 tipoTeclado = KeyboardType.Number,
                 habilitado = habilitado
             )
 
             Spacer(Modifier.height(8.dp))
+
+            // GUARDAR PRODUCTO
 
             Button(
                 onClick = viewModel::guardar,
@@ -385,13 +507,18 @@ fun ProductoFormScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    if (state.guardando) "Guardando..."
-                    else "Guardar producto"
+                    if (state.guardando) {
+                        "Guardando..."
+                    } else {
+                        "Guardar producto"
+                    }
                 )
             }
         }
     }
 }
+
+// CAMPO DE TEXTO REUTILIZABLE
 
 @Composable
 private fun CampoTexto(
@@ -399,18 +526,49 @@ private fun CampoTexto(
     valor: String,
     onChange: (String) -> Unit,
     error: String?,
+    iconoInicial: ImageVector? = null,
     tipoTeclado: KeyboardType = KeyboardType.Text,
-    habilitado: Boolean = true
+    habilitado: Boolean = true,
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
+    val iconoFinal: (@Composable () -> Unit)? =
+        trailingIcon ?: if (error != null) {
+            {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = "Campo con error",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        } else {
+            null
+        }
+
     OutlinedTextField(
         value = valor,
         onValueChange = onChange,
         label = { Text(label) },
         enabled = habilitado,
+        leadingIcon = if (iconoInicial != null) {
+            {
+                Icon(
+                    imageVector = iconoInicial,
+                    contentDescription = null
+                )
+            }
+        } else {
+            null
+        },
+        trailingIcon = iconoFinal,
         isError = error != null,
         supportingText = {
-            if (error != null) {
-                Text(error)
+            Crossfade(
+                targetState = error,
+                label = "errorCampo"
+            ) { mensaje ->
+                if (mensaje != null) {
+                    Text(mensaje)
+                }
             }
         },
         singleLine = true,

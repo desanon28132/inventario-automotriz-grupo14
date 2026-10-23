@@ -1,3 +1,4 @@
+
 package com.example.dsy1105_006d_lc7.ui.producto
 
 import com.example.dsy1105_006d_lc7.data.local.ProductoEntity
@@ -45,6 +46,13 @@ data class ProductoUiState(
 data class ListaProductosUiState(
     val productos: List<ProductoEntity> = emptyList(),
     val busqueda: String = "",
+
+    // Funcionalidades agregadas por Dario
+    val soloStockBajo: Boolean = false,
+    val total: Int = 0,
+    val stockBajo: Int = 0,
+
+    // Filtros por categoria
     val categorias: List<String> = emptyList(),
     val categoriaSeleccionada: String? = null
 )

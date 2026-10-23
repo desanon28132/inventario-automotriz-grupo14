@@ -26,6 +26,13 @@ import androidx.compose.foundation.layout.height
 
 import androidx.compose.foundation.layout.padding
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -190,6 +197,8 @@ fun LoginScreen(
                     value=state.username,
                     onValueChange = vm::onUsernameChange,
                     label={Text("Usuario")},
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    isError = state.error != null,
                     singleLine = true,
                     modifier= Modifier.fillMaxWidth(0.95f)
                 )
@@ -198,12 +207,17 @@ fun LoginScreen(
         value=state.password,
         onValueChange = vm::onPasswordChange,
         label={Text("Contraseña")},
+        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+        isError = state.error != null,
         singleLine = true,
         visualTransformation = if (showPass)
             VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            TextButton(onClick = {showPass = !showPass}){
-                Text(if (showPass) "Ocultar" else "Ver")
+            IconButton(onClick = {showPass = !showPass}){
+                Icon(
+                    if (showPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = if (showPass) "Ocultar contraseña" else "Mostrar contraseña"
+                )
             }
 
         }, // fin trail

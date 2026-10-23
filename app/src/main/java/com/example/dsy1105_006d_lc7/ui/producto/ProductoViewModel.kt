@@ -1,10 +1,14 @@
+
 package com.example.dsy1105_006d_lc7.ui.producto
 
 import android.app.Application
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dsy1105_006d_lc7.data.local.AppDatabase
 import com.example.dsy1105_006d_lc7.data.local.ProductoEntity
+import com.example.dsy1105_006d_lc7.data.local.cantidadSugerida
+import com.example.dsy1105_006d_lc7.data.local.stockBajo
 import com.example.dsy1105_006d_lc7.data.repository.ProductoRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,25 +16,29 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+data class BorradorCorreo(
+    val destinatario: String,
+    val asunto: String,
+    val cuerpo: String
+)
+
 class ProductoViewModel(application: Application) :
     AndroidViewModel(application) {
 
+    private val database = AppDatabase.getDatabase(application)
+
     private val repository = ProductoRepository(
-        AppDatabase.getDatabase(application).productoDao()
+        database.productoDao()
     )
 
-    private val proveedorDao = AppDatabase
-        .getDatabase(application)
-        .proveedorDao()
-
-    private val ubicacionDao = AppDatabase
-        .getDatabase(application)
-        .ubicacionDao()
+    private val proveedorDao = database.proveedorDao()
+    private val ubicacionDao = database.ubicacionDao()
 
     val proveedores = proveedorDao.observarTodos()
         .stateIn(
@@ -46,19 +54,33 @@ class ProductoViewModel(application: Application) :
             emptyList()
         )
 
+    // ESTADO DEL FORMULARIO
+
     private val _form = MutableStateFlow(ProductoUiState())
     val form: StateFlow<ProductoUiState> = _form.asStateFlow()
 
-    // Búsqueda y filtro de la lista.
+    // MENSAJES
+
+    private val _mensaje = MutableStateFlow<String?>(null)
+    val mensaje: StateFlow<String?> = _mensaje.asStateFlow()
+
+    fun mensajeMostrado() {
+        _mensaje.value = null
+    }
+
+    // FILTROS DE PRODUCTOS
+
     private val _busqueda = MutableStateFlow("")
+    private val _soloStockBajo = MutableStateFlow(false)
     private val _categoriaSeleccionada =
         MutableStateFlow<String?>(null)
 
     val lista: StateFlow<ListaProductosUiState> = combine(
         repository.observarTodos(),
         _busqueda,
+        _soloStockBajo,
         _categoriaSeleccionada
-    ) { productos, texto, seleccion ->
+    ) { productos, texto, soloBajo, seleccion ->
 
         val categorias = productos
             .map { it.categoria.trim() }
@@ -75,12 +97,6 @@ class ProductoViewModel(application: Application) :
         val consulta = texto.trim()
 
         val filtrados = productos.filter { producto ->
-            val coincideCategoria =
-                categoriaActual == null ||
-                        producto.categoria.trim().equals(
-                            categoriaActual,
-                            ignoreCase = true
-                        )
 
             val coincideBusqueda =
                 consulta.isBlank() ||
@@ -93,15 +109,31 @@ class ProductoViewModel(application: Application) :
                             ignoreCase = true
                         )
 
-            coincideCategoria && coincideBusqueda
+            val coincideCategoria =
+                categoriaActual == null ||
+                        producto.categoria.trim().equals(
+                            categoriaActual,
+                            ignoreCase = true
+                        )
+
+            val coincideStock =
+                !soloBajo || producto.stockBajo
+
+            coincideBusqueda &&
+                    coincideCategoria &&
+                    coincideStock
         }
 
         ListaProductosUiState(
             productos = filtrados,
             busqueda = texto,
+            soloStockBajo = soloBajo,
+            total = productos.size,
+            stockBajo = productos.count { it.stockBajo },
             categorias = categorias,
             categoriaSeleccionada = categoriaActual
         )
+
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -112,16 +144,26 @@ class ProductoViewModel(application: Application) :
         _busqueda.value = texto
     }
 
+    fun onSoloStockBajoChange(valor: Boolean) {
+        _soloStockBajo.value = valor
+    }
+
     fun onFiltroCategoriaChange(categoria: String?) {
+        _categoriaSeleccionada.value = categoria
+    }
+
+    fun onCategoriaSeleccionada(categoria: String?) {
         _categoriaSeleccionada.value = categoria
     }
 
     fun limpiarFiltros() {
         _busqueda.value = ""
+        _soloStockBajo.value = false
         _categoriaSeleccionada.value = null
     }
 
-    // Campos del formulario.
+    // CAMPOS DEL FORMULARIO
+
     fun onCodigoChange(v: String) =
         _form.update {
             it.copy(codigo = v, codigoError = null)
@@ -173,8 +215,15 @@ class ProductoViewModel(application: Application) :
         }
 
     fun onEstadoChange(v: String) {
-        if (v in listOf("Activo", "Inactivo", "Descontinuado")) {
-            _form.update { it.copy(estado = v) }
+        if (v in listOf(
+                "Activo",
+                "Inactivo",
+                "Descontinuado"
+            )
+        ) {
+            _form.update {
+                it.copy(estado = v)
+            }
         }
     }
 
@@ -188,21 +237,32 @@ class ProductoViewModel(application: Application) :
 
     fun onProveedorChange(id: Int?) {
         _form.update {
-            it.copy(proveedorId = id, errorGeneral = null)
+            it.copy(
+                proveedorId = id,
+                errorGeneral = null
+            )
         }
     }
 
     fun onUbicacionChange(id: Int?) {
         _form.update {
-            it.copy(ubicacionId = id, errorGeneral = null)
+            it.copy(
+                ubicacionId = id,
+                errorGeneral = null
+            )
         }
     }
+
+    // NUEVO PRODUCTO
 
     fun nuevoProducto() {
         _form.value = ProductoUiState()
     }
 
+    // CARGAR PRODUCTO
+
     fun cargarProducto(id: Int) {
+
         _form.value = ProductoUiState(
             id = id,
             cargando = true
@@ -238,10 +298,13 @@ class ProductoViewModel(application: Application) :
                     proveedorId = p.proveedorId,
                     ubicacionId = p.ubicacionId,
                     fechaCambioUbicacion = p.fechaCambioUbicacion,
-                    cantidadReposicion = p.cantidadReposicion.toString()
+                    cantidadReposicion =
+                        p.cantidadReposicion.toString()
                 )
+
             } catch (e: CancellationException) {
                 throw e
+
             } catch (e: Exception) {
                 _form.update {
                     it.copy(
@@ -253,8 +316,13 @@ class ProductoViewModel(application: Application) :
         }
     }
 
+    // VALIDACIONES
+
     private fun validarEntero(valor: String): String? {
-        if (valor.isBlank()) return "Campo obligatorio"
+
+        if (valor.isBlank()) {
+            return "Campo obligatorio"
+        }
 
         val numero = valor.trim().toIntOrNull()
             ?: return "Ingresa un número entero válido"
@@ -267,7 +335,10 @@ class ProductoViewModel(application: Application) :
     }
 
     private fun validarPrecio(valor: String): String? {
-        if (valor.isBlank()) return "Campo obligatorio"
+
+        if (valor.isBlank()) {
+            return "Campo obligatorio"
+        }
 
         val numero = valor.trim().toLongOrNull()
             ?: return "Ingresa pesos enteros, sin puntos ni comas"
@@ -280,26 +351,47 @@ class ProductoViewModel(application: Application) :
     }
 
     private fun validar(): Boolean {
+
         val s = _form.value
 
         val validado = s.copy(
-            codigoError = if (s.codigo.isBlank())
-                "El código es obligatorio" else null,
-            nombreError = if (s.nombre.isBlank())
-                "El nombre es obligatorio" else null,
-            categoriaError = if (s.categoria.isBlank())
-                "La categoría es obligatoria" else null,
-            descripcionError = if (s.descripcion.isBlank())
-                "La descripción es obligatoria" else null,
-            marcaError = if (s.marca.isBlank())
-                "La marca es obligatoria" else null,
-            unidadMedidaError = if (s.unidadMedida.isBlank())
-                "La unidad de medida es obligatoria" else null,
+            codigoError =
+                if (s.codigo.isBlank())
+                    "El código es obligatorio"
+                else null,
+
+            nombreError =
+                if (s.nombre.isBlank())
+                    "El nombre es obligatorio"
+                else null,
+
+            categoriaError =
+                if (s.categoria.isBlank())
+                    "La categoría es obligatoria"
+                else null,
+
+            descripcionError =
+                if (s.descripcion.isBlank())
+                    "La descripción es obligatoria"
+                else null,
+
+            marcaError =
+                if (s.marca.isBlank())
+                    "La marca es obligatoria"
+                else null,
+
+            unidadMedidaError =
+                if (s.unidadMedida.isBlank())
+                    "La unidad de medida es obligatoria"
+                else null,
+
             cantidadError = validarEntero(s.cantidad),
             stockMinimoError = validarEntero(s.stockMinimo),
             precioCompraError = validarPrecio(s.precioCompra),
             precioVentaError = validarPrecio(s.precioVenta),
-            cantidadReposicionError = validarEntero(s.cantidadReposicion),
+            cantidadReposicionError =
+                validarEntero(s.cantidadReposicion),
+
             errorGeneral = null
         )
 
@@ -320,14 +412,24 @@ class ProductoViewModel(application: Application) :
         ).all { it == null }
     }
 
+    // GUARDAR PRODUCTO
+
     fun guardar() {
-        if (_form.value.guardando || _form.value.cargando) return
+
+        if (_form.value.guardando || _form.value.cargando) {
+            return
+        }
+
         if (!validar()) return
 
         val s = _form.value
-        _form.update { it.copy(guardando = true) }
+
+        _form.update {
+            it.copy(guardando = true)
+        }
 
         viewModelScope.launch {
+
             try {
                 val duplicado = repository.obtenerPorCodigo(
                     s.codigo.trim()
@@ -337,7 +439,8 @@ class ProductoViewModel(application: Application) :
                     _form.update {
                         it.copy(
                             guardando = false,
-                            codigoError = "Ya existe un producto con este código"
+                            codigoError =
+                                "Ya existe un producto con este código"
                         )
                     }
                     return@launch
@@ -365,15 +468,18 @@ class ProductoViewModel(application: Application) :
                     return@launch
                 }
 
+                // VALIDAR PROVEEDOR
+
                 val proveedorId = s.proveedorId
 
                 if (proveedorId != null) {
-                    val proveedor = proveedorDao.obtenerPorId(
-                        proveedorId
-                    )
+
+                    val proveedor =
+                        proveedorDao.obtenerPorId(proveedorId)
 
                     val esAsociacionExistente =
-                        s.esEdicion && base.proveedorId == proveedorId
+                        s.esEdicion &&
+                                base.proveedorId == proveedorId
 
                     if (
                         proveedor == null ||
@@ -382,12 +488,15 @@ class ProductoViewModel(application: Application) :
                         _form.update {
                             it.copy(
                                 guardando = false,
-                                errorGeneral = "Selecciona un proveedor activo"
+                                errorGeneral =
+                                    "Selecciona un proveedor activo"
                             )
                         }
                         return@launch
                     }
                 }
+
+                // VALIDAR UBICACION
 
                 val ubicacionId = s.ubicacionId
 
@@ -398,7 +507,8 @@ class ProductoViewModel(application: Application) :
                     _form.update {
                         it.copy(
                             guardando = false,
-                            errorGeneral = "La ubicación seleccionada ya no existe"
+                            errorGeneral =
+                                "La ubicación seleccionada ya no existe"
                         )
                     }
                     return@launch
@@ -411,15 +521,21 @@ class ProductoViewModel(application: Application) :
                         base.fechaCambioUbicacion
                     }
 
+                // PREPARAR PRODUCTO
+
                 val producto = base.copy(
                     codigo = s.codigo.trim(),
                     nombre = s.nombre.trim(),
                     categoria = s.categoria.trim(),
+
+                    // El stock existente no se modifica
+                    // directamente desde el formulario.
                     cantidad = if (s.esEdicion) {
                         base.cantidad
                     } else {
                         s.cantidad.trim().toInt()
                     },
+
                     stockMinimo = s.stockMinimo.trim().toInt(),
                     descripcion = s.descripcion.trim(),
                     marca = s.marca.trim(),
@@ -430,8 +546,11 @@ class ProductoViewModel(application: Application) :
                     proveedorId = proveedorId,
                     ubicacionId = ubicacionId,
                     fechaCambioUbicacion = fechaUbicacion,
-                    cantidadReposicion = s.cantidadReposicion.trim().toInt()
+                    cantidadReposicion =
+                        s.cantidadReposicion.trim().toInt()
                 )
+
+                // GUARDAR EN ROOM
 
                 if (s.esEdicion) {
                     repository.actualizar(producto)
@@ -439,19 +558,29 @@ class ProductoViewModel(application: Application) :
                     repository.insertar(producto)
                 }
 
+                _mensaje.value =
+                    if (s.esEdicion) {
+                        "Producto actualizado correctamente"
+                    } else {
+                        "Producto creado correctamente"
+                    }
+
                 _form.update {
                     it.copy(
                         guardando = false,
                         guardadoExitosamente = true
                     )
                 }
+
             } catch (e: CancellationException) {
                 throw e
+
             } catch (e: Exception) {
                 _form.update {
                     it.copy(
                         guardando = false,
-                        errorGeneral = "No se pudo guardar. Intenta nuevamente."
+                        errorGeneral =
+                            "No se pudo guardar. Intenta nuevamente."
                     )
                 }
             }
@@ -464,9 +593,77 @@ class ProductoViewModel(application: Application) :
         }
     }
 
+    // ELIMINAR PRODUCTO
+
     fun eliminar(producto: ProductoEntity) {
         viewModelScope.launch {
             repository.eliminar(producto)
         }
+    }
+
+    // RESTAURAR PRODUCTO ELIMINADO
+
+    fun restaurar(producto: ProductoEntity) {
+        viewModelScope.launch {
+            repository.insertar(producto)
+        }
+    }
+
+    // PRODUCTOS CON STOCK BAJO
+
+    val productosStockBajo: StateFlow<List<ProductoEntity>> =
+        repository.observarTodos()
+            .map { productos ->
+                productos.filter { it.stockBajo }
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
+
+    // GENERAR BORRADOR DE CORREO
+
+    fun generarBorrador(
+        productos: List<ProductoEntity>
+    ): BorradorCorreo {
+
+        val detalle = productos.joinToString("\n") { p ->
+            "- ${p.nombre} (código ${p.codigo}): " +
+                    "disponible ${p.cantidad}, " +
+                    "solicitar ${p.cantidadSugerida} unidades"
+        }
+
+        val cuerpo =
+            "Estimado proveedor:\n\n" +
+                    "Junto con saludar, solicitamos disponibilidad " +
+                    "y cotización de los siguientes productos:\n\n" +
+                    detalle +
+                    "\n\nQuedamos atentos a su respuesta.\n\n" +
+                    "Saludos cordiales,\n" +
+                    "Taller PuenteAuto"
+
+        return BorradorCorreo(
+            destinatario = "proveedor.ficticio@example.com",
+            asunto = "Solicitud de cotización de reposición",
+            cuerpo = cuerpo
+        )
+    }
+
+    // VALIDAR DESTINATARIO
+
+    fun validarDestinatario(texto: String): String? {
+
+        val correo = texto.trim()
+
+        if (correo.isBlank()) {
+            return "El destinatario es obligatorio"
+        }
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(correo).matches()) {
+            return "Ingresa un correo válido"
+        }
+
+        return null
     }
 }

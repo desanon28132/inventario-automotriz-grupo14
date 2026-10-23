@@ -92,7 +92,7 @@ fun QrScannerScreen(
 }
 
 @Composable
-private fun PermisoRequerido(onSolicitar: () -> Unit) {
+internal fun PermisoRequerido(onSolicitar: () -> Unit) {
     Text(
         "Permiso de cámara requerido",
         style = MaterialTheme.typography.titleLarge,
@@ -105,7 +105,7 @@ private fun PermisoRequerido(onSolicitar: () -> Unit) {
 }
 
 @Composable
-private fun Escaner(onDetectado: (String) -> Unit) {
+internal fun Escaner(onDetectado: (String) -> Unit) {
     Text("Escanea el QR del producto", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(16.dp))
     Box(

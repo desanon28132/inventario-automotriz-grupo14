@@ -76,6 +76,14 @@ dependencies {
     // ML Kit: lectura de códigos QR
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
+    // Guía 15: tests de lógica y ViewModels (JVM)
+    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
+    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.5")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -83,4 +91,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+// Kotest y JUnit 5 se ejecutan localmente sobre JUnit Platform.
+// Los tests instrumentados de Compose mantienen el runner JUnit 4 de AndroidX.
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
